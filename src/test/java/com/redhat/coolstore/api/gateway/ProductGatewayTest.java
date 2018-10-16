@@ -1,10 +1,12 @@
 package com.redhat.coolstore.api.gateway;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -14,12 +16,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.redhat.coolstore.api.gateway.model.Inventory;
+import com.redhat.coolstore.api.gateway.model.Product;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.builder.NotifyBuilder;
 import org.apache.http.HttpStatus;
+import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,14 +41,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.redhat.coolstore.api.gateway.model.Inventory;
-import com.redhat.coolstore.api.gateway.model.Product;
 
 @ActiveProfiles("test")
 @RunWith(SpringRunner.class)
@@ -97,11 +99,15 @@ public class ProductGatewayTest {
                 .withStatus(200).withHeader("Content-Type", "application/json")
                 .withBody(productResponseStr)));
 
-        inventoryServiceMock.stubFor(get(urlMatching("/inventory/p1")).willReturn(aResponse()
+        inventoryServiceMock.stubFor(get(urlPathEqualTo("/inventory/p1"))
+                .withQueryParam("storeStatus", equalTo("true"))
+                .willReturn(aResponse()
                 .withStatus(200).withHeader("Content-Type", "application/json")
                 .withBody(inventory1ResponseStr)));
 
-        inventoryServiceMock.stubFor(get(urlMatching("/inventory/p2")).willReturn(aResponse()
+        inventoryServiceMock.stubFor(get(urlPathEqualTo("/inventory/p2"))
+                .withQueryParam("storeStatus", equalTo("true"))
+                .willReturn(aResponse()
                 .withStatus(200).withHeader("Content-Type", "application/json")
                 .withBody(inventory2ResponseStr)));
 
@@ -115,11 +121,11 @@ public class ProductGatewayTest {
         assertThat(notify.matches(10, TimeUnit.SECONDS), is(true));
 
         JsonNode node = new ObjectMapper(new JsonFactory()).readTree(response.getBody());
-        assertThat(node.get(0).get("itemId").asText(), equalTo("p1"));
-        assertThat(node.get(0).get("availability").get("itemId").asText(), equalTo("p1"));
+        assertThat(node.get(0).get("itemId").asText(), Matchers.equalTo("p1"));
+        assertThat(node.get(0).get("availability").get("itemId").asText(), Matchers.equalTo("p1"));
         assertThat(node.get(0).get("availability").get("quantity").asInt(), equalTo(1));
-        assertThat(node.get(1).get("itemId").asText(), equalTo("p2"));
-        assertThat(node.get(1).get("availability").get("itemId").asText(), equalTo("p2"));
+        assertThat(node.get(1).get("itemId").asText(), Matchers.equalTo("p2"));
+        assertThat(node.get(1).get("availability").get("itemId").asText(), Matchers.equalTo("p2"));
         assertThat(node.get(1).get("availability").get("quantity").asInt(), equalTo(2));
         assertCorsHeaders(response);
         catalogServiceMock.verify(getRequestedFor(urlEqualTo("/products")));
@@ -160,9 +166,9 @@ public class ProductGatewayTest {
 
     private void assertCorsHeaders(ResponseEntity<?> response) {
         assertThat(response.getHeaders().get("Access-Control-Allow-Origin"), notNullValue());
-        assertThat(response.getHeaders().get("Access-Control-Allow-Origin").get(0), equalTo("*"));
+        assertThat(response.getHeaders().get("Access-Control-Allow-Origin").get(0), Matchers.equalTo("*"));
         assertThat(response.getHeaders().get("Access-Control-Allow-Methods"), notNullValue());
-        assertThat(response.getHeaders().get("Access-Control-Allow-Methods").get(0), equalTo("GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH"));
+        assertThat(response.getHeaders().get("Access-Control-Allow-Methods").get(0), Matchers.equalTo("GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH"));
     }
 
 }

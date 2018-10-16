@@ -54,6 +54,7 @@ public class ProductGateway extends RouteBuilder {
             .setHeader(Exchange.CONTENT_TYPE, simple(MediaType.APPLICATION_JSON_VALUE))
             .setHeader(Exchange.HTTP_METHOD, HttpMethods.GET)
             .setHeader(Exchange.HTTP_PATH, simple("inventory/${header.itemId}"))
+            .setHeader(Exchange.HTTP_QUERY, simple("storeStatus=true"))
             .setHeader(Exchange.HTTP_URI, simple("{{inventory.service.url}}"))
             .to("http4://DUMMY1")
             .setHeader("CamelJacksonUnmarshalType", simple(Inventory.class.getName()))
